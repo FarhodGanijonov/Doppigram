@@ -1,0 +1,44 @@
+version: '3'
+
+services:
+  web:
+    build: .
+    env_file:
+      - .env
+    command: sh -c "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 config.asgi:application"
+    volumes:
+      - .:/Dop
+      - static_volume:/Dop/staticfiles
+      - media_volume:/Dop/mediafiles
+    ports:
+      - "8000:8000"
+    depends_on:
+      - doppi_db
+      - redis
+    restart: always
+
+  doppi_db:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: doppi
+      POSTGRES_USER: user_doppi
+      POSTGRES_PASSWORD: password_doppi
+    ports:
+      - "5449:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6385:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
+  redis_data:
