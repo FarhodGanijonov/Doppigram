@@ -1,3 +1,5 @@
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.db import models
 from rest_framework import generics, permissions
 from rest_framework.permissions import IsAuthenticated
@@ -25,23 +27,26 @@ class ChatCreateView(generics.CreateAPIView):
         user1 = self.request.user
         user2_id = self.request.data.get('user2')
 
-        # oldindan tekshir: chat mavjud bo‘lsa, uni qaytar
-        chat, created = Chat.objects.get_or_create(
-            user1=min(user1.id, int(user2_id)),
-            user2=max(user1.id, int(user2_id))
-        )
-        self.chat_instance = chat  # bu optional — keyin serializerga berish mumkin
+        if not user2_id:
+            return
 
-    def create(self, request, *args, **kwargs):
-        user1 = self.request.user
-        user2_id = self.request.data.get('user2')
+        chat, created = Chat.objects.get_or_create(user1=user1, user2_id=user2_id)
 
-        chat, created = Chat.objects.get_or_create(
-            user1_id=min(user1.id, int(user2_id)),
-            user2_id=max(user1.id, int(user2_id))
-        )
-        serializer = self.get_serializer(chat)
-        return Response(serializer.data)
+        if created:
+            serializer.instance = chat  # bu DRF uchun kerak
+
+            # WebSocket orqali yangi chatni ikkala foydalanuvchiga jo‘natish
+            channel_layer = get_channel_layer()
+            serialized_chat = ChatSerializer(chat, context={"request": self.request}).data
+
+            for uid in [user1.id, int(user2_id)]:
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{uid}",
+                    {
+                        "type": "new_chat",
+                        "chat": serialized_chat
+                    }
+                )
 
 
 class MessageListView(APIView):
