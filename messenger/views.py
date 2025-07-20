@@ -33,12 +33,11 @@ class ChatCreateView(generics.CreateAPIView):
         chat, created = Chat.objects.get_or_create(user1=user1, user2_id=user2_id)
 
         if created:
-            serializer.instance = chat  # DRF uchun zarur
+            serializer.instance = chat
 
-            # ✅ To'g'ri context bilan serializer
             channel_layer = get_channel_layer()
             serialized_chat = ChatSerializer(
-                chat,
+                instance=chat,
                 context={"request": self.request, "user": self.request.user}
             ).data
 
