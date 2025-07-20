@@ -13,9 +13,11 @@ class ChatSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'last_message', 'created_at']
 
     def get_user(self, obj):
-        context_user = self.context.get('user')
-        if not context_user:
+        context_user = self.context.get('user') or self.context.get('request', {}).user
+
+        if not context_user or not hasattr(context_user, "id"):
             return None
+
         other_user = obj.user2 if obj.user1 == context_user else obj.user1
         from .serializer import UserShortSerializer
         return UserShortSerializer(other_user).data
