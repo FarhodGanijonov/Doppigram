@@ -2,6 +2,8 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db import models
 from rest_framework import generics, permissions
+from rest_framework.exceptions import ValidationError
+from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,9 +21,9 @@ class ChatListView(generics.ListAPIView):
         return Chat.objects.filter(Q(user1=user) | Q(user2=user))
 
 
-class ChatCreateView(generics.CreateAPIView):
+class ChatCreateView(CreateAPIView):
     serializer_class = ChatSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
         user1 = self.request.user
@@ -35,11 +37,17 @@ class ChatCreateView(generics.CreateAPIView):
         if created:
             serializer.instance = chat
 
-            channel_layer = get_channel_layer()
+            # 🌐 WebSocket orqali yuborish uchun chat modelini serialize qilamiz
+            from .serializer import ChatSerializer
             serialized_chat = ChatSerializer(
-                instance=chat,
-                context={"request": self.request, "user": self.request.user}
+                chat,
+                context={"user": self.request.user}  # ❗ faqat 'user' kerak
             ).data
+
+            # 🔁 Har ikkala foydalanuvchiga chatni yuborish
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            channel_layer = get_channel_layer()
 
             for uid in [user1.id, int(user2_id)]:
                 async_to_sync(channel_layer.group_send)(
