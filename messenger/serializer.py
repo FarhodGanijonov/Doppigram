@@ -21,6 +21,8 @@ class ChatSerializer(serializers.ModelSerializer):
         return UserShortSerializer(other_user).data
 
     def get_last_message(self, obj):
+        if not hasattr(obj, "messages"):
+            return None
         last_msg = obj.messages.order_by('-timestamp').first()
         if last_msg:
             return {

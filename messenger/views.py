@@ -37,17 +37,15 @@ class ChatCreateView(CreateAPIView):
         if created:
             serializer.instance = chat
 
-            # 🌐 WebSocket orqali yuborish uchun chat modelini serialize qilamiz
             from .serializer import ChatSerializer
-            serialized_chat = ChatSerializer(
-                chat,
-                context={"user": self.request.user}  # ❗ faqat 'user' kerak
-            ).data
-
-            # 🔁 Har ikkala foydalanuvchiga chatni yuborish
             from channels.layers import get_channel_layer
             from asgiref.sync import async_to_sync
+
             channel_layer = get_channel_layer()
+            serialized_chat = ChatSerializer(
+                serializer.instance,  # <-- model obyekt
+                context={"user": self.request.user}
+            ).data
 
             for uid in [user1.id, int(user2_id)]:
                 async_to_sync(channel_layer.group_send)(
