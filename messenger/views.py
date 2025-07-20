@@ -33,11 +33,14 @@ class ChatCreateView(generics.CreateAPIView):
         chat, created = Chat.objects.get_or_create(user1=user1, user2_id=user2_id)
 
         if created:
-            serializer.instance = chat  # bu DRF uchun kerak
+            serializer.instance = chat  # DRF uchun zarur
 
-            # WebSocket orqali yangi chatni ikkala foydalanuvchiga jo‘natish
+            # ✅ To'g'ri context bilan serializer
             channel_layer = get_channel_layer()
-            serialized_chat = ChatSerializer(chat, context={"request": self.request}).data
+            serialized_chat = ChatSerializer(
+                chat,
+                context={"request": self.request, "user": self.request.user}
+            ).data
 
             for uid in [user1.id, int(user2_id)]:
                 async_to_sync(channel_layer.group_send)(
