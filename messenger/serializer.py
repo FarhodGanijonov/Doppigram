@@ -38,7 +38,7 @@ class ChatSerializer(serializers.ModelSerializer):
 
 class UserShortSerializer(serializers.ModelSerializer):
     class Meta:
-        model = AbstractUser  # yoki AbstractUser
+        model = AbstractUser
         fields = ['id', 'full_name', 'avatar']
 
 

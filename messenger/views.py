@@ -30,23 +30,17 @@ class ChatCreateView(CreateAPIView):
         user2_id = self.request.data.get('user2')
 
         if not user2_id:
-            return
+            return  # foydalanuvchi tanlanmagan bo‘lsa
 
         chat, created = Chat.objects.get_or_create(user1=user1, user2_id=user2_id)
 
         if created:
             serializer.instance = chat
 
-            from .serializer import ChatSerializer
-            from channels.layers import get_channel_layer
-            from asgiref.sync import async_to_sync
+            # ✅ model object uzatilyapti (chat), dict emas!
+            serialized_chat = ChatSerializer(chat, context={"user": self.request.user}).data
 
             channel_layer = get_channel_layer()
-            serialized_chat = ChatSerializer(
-                serializer.instance,  # <-- model obyekt
-                context={"user": self.request.user}
-            ).data
-
             for uid in [user1.id, int(user2_id)]:
                 async_to_sync(channel_layer.group_send)(
                     f"user_{uid}",
