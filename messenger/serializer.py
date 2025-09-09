@@ -22,7 +22,7 @@ class ChatSerializer(serializers.ModelSerializer):
         return {
             "id": other_user.id,
             "full_name": other_user.full_name,
-            "avatar": other_user.avatar.url if other_user.avatar else None
+            "avatar": other_user.avatar if other_user.avatar else None
         }
 
     def get_last_message(self, obj):
