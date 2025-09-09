@@ -19,8 +19,11 @@ class ChatSerializer(serializers.ModelSerializer):
             return None
 
         other_user = obj.user2 if obj.user1 == context_user else obj.user1
-        from .serializer import UserShortSerializer
-        return UserShortSerializer(other_user).data
+        return {
+            "id": other_user.id,
+            "full_name": other_user.full_name,
+            "avatar": other_user.avatar.url if other_user.avatar else None
+        }
 
     def get_last_message(self, obj):
         if not hasattr(obj, "messages"):
