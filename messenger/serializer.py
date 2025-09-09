@@ -40,6 +40,8 @@ class ChatSerializer(serializers.ModelSerializer):
 
 
 class UserShortSerializer(serializers.ModelSerializer):
+    avatar = serializers.ImageField(use_url=True, required=False)
+
     class Meta:
         model = AbstractUser
         fields = ['id', 'full_name', 'avatar']
