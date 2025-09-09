@@ -20,6 +20,12 @@ class ChatListView(generics.ListAPIView):
         user = self.request.user
         return Chat.objects.filter(Q(user1=user) | Q(user2=user))
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({
+            "request": self.request
+        })
+        return context
 
 class ChatCreateView(CreateAPIView):
     serializer_class = ChatSerializer
