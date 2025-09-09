@@ -1,7 +1,7 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
-
-from users.models import AbstractUser
 from .models import Message, Chat
+User = get_user_model()
 
 
 class ChatSerializer(serializers.ModelSerializer):
@@ -43,7 +43,7 @@ class UserShortSerializer(serializers.ModelSerializer):
     avatar = serializers.ImageField(use_url=True, required=False)
 
     class Meta:
-        model = AbstractUser
+        model = User
         fields = ['id', 'full_name', 'avatar']
 
 
