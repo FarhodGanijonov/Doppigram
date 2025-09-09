@@ -1,8 +1,6 @@
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db import models
-from rest_framework import generics, permissions
-from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -12,20 +10,15 @@ from .models import Chat
 from .serializer import ChatSerializer, MessageSerializer
 from django.db.models import Q
 
-class ChatListView(generics.ListAPIView):
-    serializer_class = ChatSerializer
-    permission_classes = [permissions.IsAuthenticated]
+class ChatListView(APIView):
+    permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
-        return Chat.objects.filter(Q(user1=user) | Q(user2=user))
+    def get(self, request):
+        user = request.user
+        chats = Chat.objects.filter(Q(user1=user) | Q(user2=user))
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context.update({
-            "request": self.request
-        })
-        return context
+        serializer = ChatSerializer(chats, many=True, context={'request': request})
+        return Response(serializer.data)
 
 class ChatCreateView(CreateAPIView):
     serializer_class = ChatSerializer
