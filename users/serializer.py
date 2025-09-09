@@ -1,5 +1,7 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from .models import AbstractUser
+User = get_user_model()
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -76,3 +78,8 @@ class ContactSearchSerializer(serializers.Serializer):
         child=serializers.CharField(),
         allow_empty=False
     )
+
+class UserListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "full_name", "avatar"]   # kerakli maydonlarni yozasan

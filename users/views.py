@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -5,7 +6,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from users.models import AbstractUser
 from users.serializer import UserRegistrationSerializer, UserLoginSerializer, UserPasswordChangeSerializer, \
-    UserProfileSerializer, ContactSearchSerializer
+    UserProfileSerializer, ContactSearchSerializer, UserListSerializer
+User = get_user_model()
 
 
 class UserRegistrationView(generics.CreateAPIView):
@@ -99,3 +101,8 @@ class ContactSearchView(APIView):
         users = AbstractUser.objects.filter(phone__in=contact_list).exclude(id=request.user.id)
         data = UserProfileSerializer(users, many=True, context={'request': request}).data
         return Response(data)
+
+class UserListView(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserListSerializer
+    permission_classes = [IsAuthenticated]  # faqat login bo‘lganlar ko‘radi
