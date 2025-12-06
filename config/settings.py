@@ -110,10 +110,10 @@ TEMPLATES = [
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'doppi',  # PostgreSQL bazasi nomi
-        'USER': 'user_doppi',  # PostgreSQL foydalanuvchi nomi
-        'PASSWORD': 'password_doppi',  # PostgreSQL paroli
-        'HOST': 'doppi_db',  # Docker Compose'dagi konteyner nomi
+        'NAME': 'chat',  # PostgreSQL bazasi nomi
+        'USER': 'user_chat',  # PostgreSQL foydalanuvchi nomi
+        'PASSWORD': 'password_chat',  # PostgreSQL paroli
+        'HOST': 'chat_db',  # Docker Compose'dagi konteyner nomi
         'PORT': '5432',  # PostgreSQL uchun standart port
     }
 }
