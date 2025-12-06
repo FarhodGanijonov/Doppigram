@@ -5,7 +5,7 @@ services:
     build: .
     env_file:
       - .env
-    command: sh -c "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 config.asgi:application"
+    command: sh -c "python manage.py migrate && python manage.py collectstatic --noinput && python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/Dop
       - static_volume:/Dop/staticfiles
