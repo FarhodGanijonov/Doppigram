@@ -32,4 +32,4 @@ ENV DJANGO_SETTINGS_MODULE=config.settings
 EXPOSE 8000
 
 # Run migrations and start Daphne server
-CMD ["sh", "-c", "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 einvestment.asgi:application"]
+CMD ["sh", "-c", "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 config.asgi:application"]
