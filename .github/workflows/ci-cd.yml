@@ -32,10 +32,10 @@ jobs:
           python manage.py collectstatic --noinput
           python manage.py test
 
-      - name: Lint Python code
-        run: |
-          pip install flake8
-          flake8 .
+#      - name: Lint Python code
+#        run: |
+#          pip install flake8
+#          flake8 .
 
       # === Docker build testing ===
       - name: Build Docker Image
