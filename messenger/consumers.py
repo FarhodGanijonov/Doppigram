@@ -17,6 +17,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
 
+        # 🔥 USER ULANGAN ZAHOTI TELEGRAM STYLE — CHAT LIST YUBORILADI
+        chats = await self.get_user_chats()
+        await self.send(text_data=json.dumps({
+            "type": "chat_list",
+            "chats": chats
+        }))
+
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
