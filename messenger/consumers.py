@@ -117,7 +117,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         # Har ikki foydalanuvchi chat listini yangilash
         for uid in [sender.id, recipient.id]:
-            user_obj = sender if uid == sender.id else recipient
+            if uid == sender.id:
+                continue  # sender’ga bu update loop orqali ketmasin
+            user_obj = recipient  # faqat recipient uchun
             chat_data = await self.serialize_chat(chat, user_obj)
             await self.channel_layer.group_send(
                 f"user_{uid}",
