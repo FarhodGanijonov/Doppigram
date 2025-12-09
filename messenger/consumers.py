@@ -115,19 +115,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "message": serialized_msg
         }))
 
-        # Har ikki foydalanuvchi chat listini yangilash
-        for uid in [sender.id, recipient.id]:
-            if uid == sender.id:
-                continue  # sender’ga bu update loop orqali ketmasin
-            user_obj = recipient  # faqat recipient uchun
-            chat_data = await self.serialize_chat(chat, user_obj)
-            await self.channel_layer.group_send(
-                f"user_{uid}",
-                {
-                    'type': 'new_chat_activity',
-                    'chat': chat_data
-                }
-            )
+        # # Har ikki foydalanuvchi chat listini yangilash
+        # for uid in [sender.id, recipient.id]:
+        #     if uid == sender.id:
+        #         continue  # sender’ga bu update loop orqali ketmasin
+        #     user_obj = recipient  # faqat recipient uchun
+        #     chat_data = await self.serialize_chat(chat, user_obj)
+        #     await self.channel_layer.group_send(
+        #         f"user_{uid}",
+        #         {
+        #             'type': 'new_chat_activity',
+        #             'chat': chat_data
+        #         }
+        #     )
 
     async def new_message(self, event):
         """
