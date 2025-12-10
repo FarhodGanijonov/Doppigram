@@ -5,7 +5,6 @@ from channels.db import database_sync_to_async
 from django.db.models import Q
 from django.utils.timezone import now
 from django.core.files.base import ContentFile
-
 from .models import Chat, Message
 
 
