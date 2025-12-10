@@ -16,12 +16,28 @@ class Chat(models.Model):
 
 
 class Message(models.Model):
+    MESSAGE_TYPES = (
+        ("text", "Text"),
+        ("image", "Image"),
+        ("video", "Video"),
+        ("audio", "Audio"),
+        ("round_video", "Round Video"),
+    )
+
     chat = models.ForeignKey(Chat, related_name='messages', on_delete=models.CASCADE)
     sender = models.ForeignKey(User, related_name='messages', on_delete=models.CASCADE)
-    text = models.TextField()
-    file = models.FileField(upload_to='chat/files/', blank=True, null=True)  # media fayl
+
+    type = models.CharField(max_length=20, choices=MESSAGE_TYPES, default="text")
+
+    text = models.TextField(blank=True)
+
+    file = models.FileField(upload_to='chat/files/', blank=True, null=True)
+
+    duration = models.FloatField(null=True, blank=True)  # video/audio davomiyligi
+    waveform = models.JSONField(null=True, blank=True)   # voice (voice note) waves
+
     timestamp = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"From {self.sender} | {self.text[:20]}"
+        return f"{self.type.upper()} from {self.sender}"

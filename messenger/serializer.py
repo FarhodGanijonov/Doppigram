@@ -48,10 +48,18 @@ class MessageSerializer(serializers.ModelSerializer):
     sender = UserShortSerializer(read_only=True)
     file_url = serializers.SerializerMethodField()
 
-
     class Meta:
         model = Message
-        fields = ['id', 'chat', 'sender', 'text', 'file_url', 'timestamp', 'is_read']
+        fields = [
+            'id', 'chat', 'sender',
+            'type',
+            'text',
+            'file_url',
+            'duration',
+            'waveform',
+            'timestamp',
+            'is_read'
+        ]
 
     def get_file_url(self, obj):
         if obj.file:

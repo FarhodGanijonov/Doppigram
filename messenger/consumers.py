@@ -8,25 +8,29 @@ from django.core.files.base import ContentFile
 
 from .models import Chat, Message
 
+
 class ChatConsumer(AsyncWebsocketConsumer):
+
     async def connect(self):
         """
-        Foydalanuvchi WebSocket orqali ulanadi.
-        Agar foydalanuvchi anonim bo'lsa, ulanish yopiladi.
-        Agar foydalanuvchi autentifikatsiyalangan bo'lsa:
-            - Kanalga qo'shiladi
-            - Chat list (telegram style) avtomatik jo'natiladi
+        WebSocketga ulanish.
+        1) Userni sessiondan olish
+        2) Anon user bo'lsa - ulanishni yopish
+        3) Userga xos group yaratish (user_12)
+        4) Ulanishni qabul qilish
+        5) Ulangan paytda userning chatlar ro'yxatini qaytarish
         """
         self.user = self.scope['user']
         if not self.user or self.user.is_anonymous:
             await self.close()
             return
 
+        # Har bir user uchun alohida kanal group (xabar yuborish shuning orqali)
         self.room_group_name = f"user_{self.user.id}"
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
 
-        # Ulanuvchi zahoti chat listni yuborish
+        # Ulanuvchi userga chatlar ro'yxatini qaytarish
         chats = await self.get_user_chats()
         await self.send(text_data=json.dumps({
             "type": "chat_list",
@@ -35,20 +39,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         """
-        Foydalanuvchi ulanib bo'lganidan so'ng kanalni tark etadi
+        WebSocket uzilganda user kanal gruppasidan chiqariladi.
         """
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     async def receive(self, text_data):
         """
-        WebSocket orqali kelgan xabarlarni qabul qilish va ishlash
-        Text va media qo'llab-quvvatlanadi
+        Frontenddan kelgan xabarlarni qabul qilish.
+        Action'ga qarab turli vazifalar bajariladi:
+        - fetch_messages: chatning barcha message'larini olish
+        - fetch_chats: foydalanuvchiga tegishli chatlarni olish
+        - Yangi xabar yuborish
         """
         data = json.loads(text_data)
         action = data.get("action")
 
-        # Chat xabarlarini olish
         if action == "fetch_messages":
+            """
+            Frontdan chat_id kelsa, shu chatning barcha xabarlarini backenddan olib yuboramiz.
+            """
             chat_id = data.get("chat_id")
             if chat_id:
                 messages = await self.get_chat_messages(chat_id)
@@ -61,8 +70,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps({"error": "chat_id kerak"}))
             return
 
-        # Chatlar ro'yxatini olish
         elif action == "fetch_chats":
+            """
+            Foydalanuvchiga tegishli chatlar ro'yxatini qaytarish.
+            """
             chats = await self.get_user_chats()
             await self.send(text_data=json.dumps({
                 "type": "chat_list",
@@ -70,68 +81,72 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }))
             return
 
-        # Yangi xabar yuborish (text + media)
-        text = data.get('text')
-        recipient_id = data.get('recipient_id')
-        media_data = data.get('media')  # base64 formatda keladigan media
+        # Xabar yuborish uchun umumiy qism
+        recipient_id = data.get("recipient_id")
+        message_type = data.get("type", "text")  # text/photo/audio/video
+        text = data.get("text")
+        media_data = data.get("media")  # base64 encoded file
+        duration = data.get("duration")  # audio length
+        waveform = data.get("waveform")  # audio visualization
 
+        # Xabarni tekshirish: matn yoki media bo'lishi shart
         if not recipient_id or (not text and not media_data):
-            await self.send(text_data=json.dumps({"error": "Xabar yoki media kerak"}))
+            await self.send(text_data=json.dumps({"error": "Xabar yoki media bo'lishi kerak"}))
             return
 
         sender = self.user
         recipient = await self.get_user_by_id(recipient_id)
 
-        # Chat mavjud bo'lmasa yaratish
+        # Chat yaratish yoki mavjudini olish
         chat = await self.get_or_create_chat(sender.id, recipient_id)
 
-        # Media faylni ContentFile orqali yaratish
+        """
+        media_data: 'data:image/png;base64,....'
+        Uni base64 dan faylga o'giramiz va Message modelga saqlaymiz.
+        """
         media_file = None
         if media_data:
-            format, filestr = media_data.split(';base64,')
-            ext = format.split('/')[-1]
-            media_file = ContentFile(base64.b64decode(filestr), name=f"{now().timestamp()}.{ext}")
+            header, b64 = media_data.split(";base64,")
+            ext = header.split("/")[-1]
+            media_file = ContentFile(base64.b64decode(b64), name=f"{now().timestamp()}.{ext}")
 
-        # Xabar yaratish
-        msg = await self.create_message(chat, sender, text=text, file=media_file)
+        msg = await self.create_message(
+            chat=chat,
+            sender=sender,
+            message_type=message_type,
+            text=text or "",
+            file=media_file,
+            duration=duration,
+            waveform=waveform
+        )
 
-        # Xabarni serializer orqali tayyorlash
         serialized_msg = await self.serialize_message(msg)
 
-        # Recipientga xabarni yuborish
+        # Recipientga yuborish (group_send)
+        """
+        Boshqa userga real-time xabar yuborish.
+        Ular `new_message` methodi orqali qabul qiladi.
+        """
         await self.channel_layer.group_send(
             f"user_{recipient_id}",
             {
-                'type': 'new_message',      # xabar qabul qiluvchi metod nomi
-                'chat_id': chat.id,         # chat id
-                'message': serialized_msg   # xabar obj
+                'type': 'new_message',
+                'chat_id': chat.id,
+                'message': serialized_msg
             }
         )
 
-        # Senderga xabarni qaytarish
         await self.send(text_data=json.dumps({
             "type": "new_message",
             "chat_id": chat.id,
             "message": serialized_msg
         }))
 
-        # # Har ikki foydalanuvchi chat listini yangilash
-        # for uid in [sender.id, recipient.id]:
-        #     if uid == sender.id:
-        #         continue  # sender’ga bu update loop orqali ketmasin
-        #     user_obj = recipient  # faqat recipient uchun
-        #     chat_data = await self.serialize_chat(chat, user_obj)
-        #     await self.channel_layer.group_send(
-        #         f"user_{uid}",
-        #         {
-        #             'type': 'new_chat_activity',
-        #             'chat': chat_data
-        #         }
-        #     )
-
+    # EVENT HANDLER
     async def new_message(self, event):
         """
-        Channel orqali kelgan xabarni foydalanuvchiga yuborish
+        group_send orqali yuborilgan xabarlarni qabul qiluvchi method.
+        Bu method avtomatik chaqiriladi.
         """
         await self.send(text_data=json.dumps({
             "type": "new_message",
@@ -139,21 +154,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "message": event["message"]
         }))
 
-    async def new_chat_activity(self, event):
-        """
-        Chat list yangilanishini foydalanuvchiga yuborish
-        """
-        await self.send(text_data=json.dumps({
-            "type": "new_chat_activity",
-            "chat": event["chat"]
-        }))
+    # DB METHODS
 
-
-    #  DATABASE OPERATIONS
     @database_sync_to_async
     def get_user_by_id(self, user_id):
         """
-        User id orqali user obj olish
+        User ID orqali userni olish (sync -> async).
         """
         from django.contrib.auth import get_user_model
         User = get_user_model()
@@ -162,24 +168,34 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_or_create_chat(self, user1_id, user2_id):
         """
-        Chat mavjud bo'lmasa yaratadi
+        Ikki user o'rtasidagi chatni olish yoki yaratish.
+        Chat har doim user ID bo'yicha sort qilinadi (tartib muhim).
         """
         user1, user2 = sorted([user1_id, user2_id])
         chat, _ = Chat.objects.get_or_create(user1_id=user1, user2_id=user2)
         return chat
 
     @database_sync_to_async
-    def create_message(self, chat, sender, text="", file=None):
+    def create_message(self, chat, sender, message_type, text="", file=None, duration=None, waveform=None):
         """
-        Message yaratish funksiyasi
-        text va file (media) qo'llab-quvvatlanadi
+        Yangi xabar yaratish.
+        Xabar turi (text, image, audio, video) avtomatik ishlaydi.
         """
-        return Message.objects.create(chat=chat, sender=sender, text=text, file=file,  timestamp=now())
+        return Message.objects.create(
+            chat=chat,
+            sender=sender,
+            type=message_type,
+            text=text,
+            file=file,
+            duration=duration,
+            waveform=waveform,
+            timestamp=now()
+        )
 
     @database_sync_to_async
     def get_chat_messages(self, chat_id):
         """
-        Berilgan chat_id ga oid barcha xabarlarni olish
+        Chatdagi barcha xabarlarni olish va serializer orqali formatlash.
         """
         from .serializer import MessageSerializer
         try:
@@ -192,24 +208,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_user_chats(self):
         """
-        Foydalanuvchiga tegishli chatlar ro'yxatini olish
+        Userga tegishli barcha chatlarni olish.
+        user1=user yoki user2=user bo’lsa - chat ro’yxatga qo’shiladi.
         """
         from .serializer import ChatSerializer
         qs = Chat.objects.filter(Q(user1=self.user) | Q(user2=self.user))
         return ChatSerializer(qs, many=True, context={"user": self.user}).data
 
     @database_sync_to_async
-    def serialize_chat(self, chat, user):
-        """
-        Chat objni serializer orqali JSON formatga o'tkazish
-        """
-        from .serializer import ChatSerializer
-        return ChatSerializer(chat, context={"user": user}).data
-
-    @database_sync_to_async
     def serialize_message(self, message):
         """
-        Message objni serializer orqali JSON formatga o'tkazish
+        Message modelini JSON ko'rinishiga o'tkazish.
         """
         from .serializer import MessageSerializer
         return MessageSerializer(message, context={"request": None}).data
