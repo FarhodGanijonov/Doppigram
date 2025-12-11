@@ -3,13 +3,10 @@ version: '3'
 services:
   web:
     image: farhod2007/chatapp:latest
-    build: .
     env_file:
       - .env
     command: sh -c "python manage.py migrate && python manage.py collectstatic --noinput && python manage.py runserver 0.0.0.0:8000"
-#    command: sh -c "python manage.py migrate && python manage.py collectstatic --noinput && daphne -b 0.0.0.0 -p 8000 config.asgi:application --reload"
     volumes:
-      - .:/Dop
       - static_volume:/Dop/staticfiles
       - media_volume:/Dop/mediafiles
     ports:
