@@ -3,7 +3,6 @@ version: "3.9"
 services:
   web:
     image: farhod2007/chatapp:${IMAGE_TAG}
-    container_name: chatapp_web
     env_file:
       - .env
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8000

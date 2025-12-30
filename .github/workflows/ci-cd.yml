@@ -72,15 +72,12 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd /home/Doppigram
-      
+          
             export IMAGE_TAG=${{ github.sha }}
-      
-            docker pull farhod2007/chatapp:${IMAGE_TAG}
-      
+          
             docker compose down
+            docker compose pull
             docker compose up -d --force-recreate
-      
+          
             docker compose exec web python manage.py migrate
             docker compose exec web python manage.py collectstatic --noinput
-      
-            echo "Deploy OK"
