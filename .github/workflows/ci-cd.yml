@@ -69,8 +69,8 @@ jobs:
       # Build & Push Docker image
       - name: Build & Push image
         run: |
-          docker build -t farhod2007/chatapp:${{ github.sha }} .
-          docker push farhod2007/chatapp:${{ github.sha }}
+          docker build -t farhod2007/chatapp:latest .
+          docker push farhod2007/chatapp:latest
 
       # ==== SSH DEPLOY ====
       - name: Deploy to Production Server
@@ -81,12 +81,10 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd /home/Doppigram
-
-            export IMAGE_TAG=${{ github.sha }}
-
+          
             docker compose down
             docker compose pull
             docker compose up -d --force-recreate
-
+          
             docker compose exec web python manage.py migrate
             docker compose exec web python manage.py collectstatic --noinput
