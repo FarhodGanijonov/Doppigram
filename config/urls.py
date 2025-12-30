@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import HttpResponse
 from django.urls import path, include
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
@@ -36,11 +37,15 @@ schema_view = get_schema_view(
     permission_classes=(permissions.AllowAny,),
 )
 
+def deploy_test(request):
+    return HttpResponse("DEPLOY_OKkk")
+
 
 urlpatterns = [
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('admin/', admin.site.urls),
+    path("DEPLOY_TEST/", deploy_test),
     path('', include('messenger.urls')),
     path('', include('users.urls')),
 ]
