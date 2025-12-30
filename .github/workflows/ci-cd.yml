@@ -59,10 +59,9 @@ jobs:
       # Build & Push Docker image
       - name: Build & Push image
         run: |
-          docker build -t farhod2007/chatapp:latest .
-          docker tag farhod2007/chatapp:latest farhod2007/chatapp:${{ github.sha }}
-          docker push farhod2007/chatapp:latest
+          docker build -t farhod2007/chatapp:${{ github.sha }} .
           docker push farhod2007/chatapp:${{ github.sha }}
+
 
       # ==== SSH DEPLOY ====
       - name: Deploy to Production Server
