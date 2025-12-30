@@ -69,7 +69,7 @@ jobs:
       # Build & Push Docker image
       - name: Build & Push image
         run: |
-          docker build -t farhod2007/chatapp:latest ./Doppigram
+          docker build -t farhod2007/chatapp:latest .
           docker push farhod2007/chatapp:latest
 
       # ==== SSH DEPLOY ====
