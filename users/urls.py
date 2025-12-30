@@ -3,7 +3,7 @@ from users.views import UserPasswordChangeView, UserRegistrationView, UserLoginV
     LogoutView, ContactSearchView, UserListView
 
 urlpatterns = [
-    path('registerr/', UserRegistrationView.as_view(), name='user-register'),
+    path('register/', UserRegistrationView.as_view(), name='user-register'),
     path('login/', UserLoginView.as_view(), name='user-login'),
     path('change-password/', UserPasswordChangeView.as_view(), name='user-change-password'),
     path('me/', UserMeView.as_view(), name='user-me'),
