@@ -5,7 +5,6 @@ services:
     image: farhod2007/chatapp:latest
     env_file:
       - .env
-    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
     volumes:
       - static_volume:/Dop/staticfiles
       - media_volume:/Dop/mediafiles
