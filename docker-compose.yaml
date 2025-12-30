@@ -1,11 +1,12 @@
-version: '3'
+version: "3.9"
 
 services:
   web:
-    image: farhod2007/chatapp:latest
+    image: farhod2007/chatapp:${IMAGE_TAG}
+    container_name: chatapp_web
     env_file:
       - .env
-    command: sh -c "python manage.py migrate && python manage.py collectstatic --noinput && python manage.py runserver 0.0.0.0:8000"
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
     volumes:
       - static_volume:/Dop/staticfiles
       - media_volume:/Dop/mediafiles
@@ -20,6 +21,7 @@ services:
 
   chat_db:
     image: postgis/postgis:17-3.5
+    container_name: chatapp_db
     environment:
       POSTGRES_DB: chat
       POSTGRES_USER: user_chat
@@ -30,13 +32,14 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: always
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U user_chat -d chat" ]
+      test: ["CMD-SHELL", "pg_isready -U user_chat -d chat"]
       interval: 5s
       timeout: 5s
       retries: 10
 
   redis:
     image: redis:alpine
+    container_name: chatapp_redis
     ports:
       - "6376:6379"
     volumes:
